@@ -1,0 +1,42 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #0f0f0f;
+  color: #f5f5f5;
+  min-height: 100vh;
+}
+
+.scout-container {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 80px 24px;
+}
+
+.scout-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.scout-header p {
+  margin-top: 8px;
+  color: #888;
+  font-size: 1rem;
+}
+
+.scout-main {
+  margin-top: 40px;
+}
+
+.scout-placeholder {
+  border: 1px dashed #333;
+  border-radius: 12px;
+  padding: 60px 24px;
+  text-align: center;
+  color: #555;
+}

@@ -1,9 +1,6 @@
-export { webSearchTool } from './webSearch'
-export { docSearchTool } from './docSearch'
-export { calculatorTool } from './calculator'
+import { calculatorTool } from "./calculator";
+import { docSearchTool } from "./docSearch";
+import { webSearchTool } from "./webSearch";
 
-import { webSearchTool } from './webSearch'
-import { docSearchTool } from './docSearch'
-import { calculatorTool } from './calculator'
-
-export const allTools = [webSearchTool, docSearchTool, calculatorTool]
+export { calculatorTool, docSearchTool, webSearchTool };
+export const allTools = [webSearchTool, docSearchTool, calculatorTool];

@@ -1,13 +1,12 @@
-import { Router, IRouter } from 'express'
+import { IRouter, Router } from "express";
 
-const router: IRouter = Router()
+const router: IRouter = Router();
 
-router.get('/', (_req, res) => {
+router.get("/", (_req, res) => {
   res.json({
-    status: 'ok',
-    service: 'scout-backend',
+    status: "ok",
     timestamp: new Date().toISOString(),
-  })
-})
+  });
+});
 
-export default router
+export default router;

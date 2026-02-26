@@ -1,5 +1,5 @@
 import { IRouter, Request, Response, Router } from "express";
-import { runAgent } from "../../agent/agent";
+import { runAgent } from "../../agent";
 
 const router: IRouter = Router();
 

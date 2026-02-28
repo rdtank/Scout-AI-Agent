@@ -1,72 +1,53 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@langchain/langgraph/prebuilt", () => ({
-  createReactAgent: vi.fn(),
+vi.mock("../graph", () => ({
+  researchGraph: { invoke: vi.fn() },
 }));
 
-vi.mock("@langchain/google-genai", () => ({
-  ChatGoogleGenerativeAI: vi.fn(),
-}));
-
-vi.mock("../../lib/env", () => ({
-  env: {
-    GEMINI_API_KEY: "test-key",
-    TAVILY_API_KEY: "test-key",
-    PORT: 3001,
-    NODE_ENV: "test",
-    DATABASE_URL: "",
-    REDIS_URL: "",
-    FRONTEND_URL: "http://localhost:5173",
-  },
-}));
-
-import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { runAgent } from "../agent";
+import { researchGraph } from "../graph";
 
-const mockInvoke = vi.fn();
+const mockInvoke = vi.mocked(researchGraph.invoke);
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(createReactAgent).mockReturnValue({ invoke: mockInvoke } as never);
 });
 
 describe("runAgent", () => {
-  it("returns the final AI message as the answer", async () => {
+  it("returns answer, subQuestions, and steps from graph state", async () => {
     mockInvoke.mockResolvedValue({
-      messages: [
-        { _getType: () => "human", content: "What is 2+2?" },
-        { _getType: () => "tool", content: "4" },
-        { _getType: () => "ai", content: "The answer is 4." },
-      ],
+      query: "What is LangGraph?",
+      subQuestions: ["What is LangGraph?", "How does LangGraph work?"],
+      findings: ["LangGraph is a library...", "It works by..."],
+      currentIndex: 2,
+      answer: "LangGraph is a framework for building stateful agent graphs.",
     });
 
-    const result = await runAgent("What is 2+2?");
-    expect(result.answer).toBe("The answer is 4.");
+    const result = await runAgent("What is LangGraph?");
+
+    expect(result.answer).toBe(
+      "LangGraph is a framework for building stateful agent graphs.",
+    );
+    expect(result.subQuestions).toHaveLength(2);
+    expect(result.steps).toBe(2);
   });
 
-  it("counts tool and AI messages as steps", async () => {
+  it("maps steps to number of findings", async () => {
     mockInvoke.mockResolvedValue({
-      messages: [
-        { _getType: () => "human", content: "Research AI trends" },
-        { _getType: () => "ai", content: "" }, // reasoning step
-        { _getType: () => "tool", content: "..." }, // tool result
-        { _getType: () => "ai", content: "Here is a summary." },
-      ],
+      query: "test",
+      subQuestions: ["q1", "q2", "q3"],
+      findings: ["f1", "f2", "f3"],
+      currentIndex: 3,
+      answer: "done",
     });
 
-    const result = await runAgent("Research AI trends");
-    expect(result.steps).toBe(3); // 2 ai + 1 tool
+    const result = await runAgent("test");
+    expect(result.steps).toBe(3);
   });
 
-  it("serializes array content from multipart Gemini responses", async () => {
-    mockInvoke.mockResolvedValue({
-      messages: [
-        { _getType: () => "human", content: "Hello" },
-        { _getType: () => "ai", content: [{ type: "text", text: "Hi there" }] },
-      ],
-    });
+  it("propagates errors from the graph", async () => {
+    mockInvoke.mockRejectedValue(new Error("Gemini API timeout"));
 
-    const result = await runAgent("Hello");
-    expect(result.answer).toContain("Hi there");
+    await expect(runAgent("fail query")).rejects.toThrow("Gemini API timeout");
   });
 });

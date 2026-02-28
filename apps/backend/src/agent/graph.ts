@@ -1,0 +1,131 @@
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
+import { env } from "../lib/env";
+import { webSearchTool } from "../tools";
+import {
+  PLANNER_PROMPT,
+  RESEARCHER_PROMPT,
+  SYNTHESIZER_PROMPT,
+} from "./prompt";
+
+const StateAnnotation = Annotation.Root({
+  query: Annotation<string>(),
+  subQuestions: Annotation<string[]>({
+    reducer: (_, next) => next,
+    default: () => [],
+  }),
+  findings: Annotation<string[]>({
+    reducer: (prev, next) => [...prev, ...next],
+    default: () => [],
+  }),
+  currentIndex: Annotation<number>({
+    reducer: (_, next) => next,
+    default: () => 0,
+  }),
+  answer: Annotation<string>({
+    reducer: (_, next) => next,
+    default: () => "",
+  }),
+});
+
+type State = typeof StateAnnotation.State;
+
+function buildModel() {
+  return new ChatGoogleGenerativeAI({
+    model: "gemini-2.0-flash",
+    apiKey: env.GEMINI_API_KEY,
+    temperature: 0.1,
+  });
+}
+
+async function plannerNode(state: State): Promise<Partial<State>> {
+  const model = buildModel();
+  const response = await model.invoke([
+    new SystemMessage(PLANNER_PROMPT),
+    new HumanMessage(state.query),
+  ]);
+
+  const raw =
+    typeof response.content === "string"
+      ? response.content
+      : JSON.stringify(response.content);
+
+  // Strip markdown code fences if the model wraps the JSON
+  const cleaned = raw.replace(/```(?:json)?\n?/g, "").trim();
+
+  let subQuestions: string[];
+  try {
+    subQuestions = JSON.parse(cleaned);
+    if (!Array.isArray(subQuestions)) throw new Error("not an array");
+  } catch {
+    subQuestions = [state.query];
+  }
+
+  return { subQuestions, currentIndex: 0 };
+}
+
+async function researcherNode(state: State): Promise<Partial<State>> {
+  const model = buildModel();
+  const question = state.subQuestions[state.currentIndex];
+
+  const searchResults = await webSearchTool.invoke({ query: question });
+
+  const response = await model.invoke([
+    new SystemMessage(RESEARCHER_PROMPT),
+    new HumanMessage(
+      `Sub-question: ${question}\n\nSearch results:\n${searchResults}`,
+    ),
+  ]);
+
+  const summary =
+    typeof response.content === "string"
+      ? response.content
+      : JSON.stringify(response.content);
+
+  return {
+    findings: [summary],
+    currentIndex: state.currentIndex + 1,
+  };
+}
+
+async function synthesizerNode(state: State): Promise<Partial<State>> {
+  const model = buildModel();
+
+  const findingsText = state.findings
+    .map((f, i) => `[Finding ${i + 1} — ${state.subQuestions[i]}]\n${f}`)
+    .join("\n\n---\n\n");
+
+  const response = await model.invoke([
+    new SystemMessage(SYNTHESIZER_PROMPT),
+    new HumanMessage(
+      `Original question: ${state.query}\n\nResearch findings:\n\n${findingsText}`,
+    ),
+  ]);
+
+  const answer =
+    typeof response.content === "string"
+      ? response.content
+      : JSON.stringify(response.content);
+
+  return { answer };
+}
+
+function shouldContinueResearch(state: State): "researcher" | "synthesizer" {
+  return state.currentIndex < state.subQuestions.length
+    ? "researcher"
+    : "synthesizer";
+}
+
+export const researchGraph = new StateGraph(StateAnnotation)
+  .addNode("planner", plannerNode)
+  .addNode("researcher", researcherNode)
+  .addNode("synthesizer", synthesizerNode)
+  .addEdge(START, "planner")
+  .addEdge("planner", "researcher")
+  .addConditionalEdges("researcher", shouldContinueResearch, {
+    researcher: "researcher",
+    synthesizer: "synthesizer",
+  })
+  .addEdge("synthesizer", END)
+  .compile();

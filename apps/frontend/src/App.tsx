@@ -1,6 +1,12 @@
 import "./App.css";
+import { ActivityFeed } from "./components/ActivityFeed";
+import { Answer } from "./components/Answer";
+import { SearchForm } from "./components/SearchForm";
+import { useAgentStream } from "./hooks/useAgentStream";
 
-function App() {
+export default function App() {
+  const { appState, events, answer, handleAction, formRef } = useAgentStream();
+
   return (
     <div className="scout-container">
       <header className="scout-header">
@@ -9,12 +15,12 @@ function App() {
       </header>
 
       <main className="scout-main">
-        <div className="scout-placeholder">
-          <span>Agent UI coming in Phase 5 (Streaming UX)</span>
-        </div>
+        <SearchForm ref={formRef} action={handleAction} />
+        {events.length > 0 && (
+          <ActivityFeed events={events} isRunning={appState === "running"} />
+        )}
+        {answer && <Answer text={answer} />}
       </main>
     </div>
   );
 }
-
-export default App;

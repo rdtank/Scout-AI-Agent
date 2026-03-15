@@ -7,7 +7,7 @@ vi.mock("@langchain/google-genai", () => ({
 }));
 
 vi.mock("../../tools", () => ({
-  webSearchTool: { invoke: vi.fn() },
+  webSearchTool: { name: "webSearch", invoke: vi.fn() },
   allTools: [],
 }));
 

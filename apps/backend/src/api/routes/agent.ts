@@ -1,17 +1,19 @@
 import { IRouter, Request, Response, Router } from "express";
 import { runAgent } from "../../agent";
 import { researchGraph } from "../../agent/graph";
+import { QuerySchema } from "../../agent/guardrails";
 
 const router: IRouter = Router();
 
 router.post("/run", async (req: Request, res: Response) => {
-  const { query } = req.body as { query?: string };
-  if (!query?.trim()) {
-    res.status(400).json({ error: "query is required" });
+  const parsed = QuerySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0].message });
     return;
   }
+  const { query } = parsed.data;
   try {
-    const result = await runAgent(query.trim());
+    const result = await runAgent(query);
     res.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -21,11 +23,12 @@ router.post("/run", async (req: Request, res: Response) => {
 });
 
 router.post("/stream", async (req: Request, res: Response) => {
-  const { query } = req.body as { query?: string };
-  if (!query?.trim()) {
-    res.status(400).json({ error: "query is required" });
+  const parsed = QuerySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0].message });
     return;
   }
+  const { query } = parsed.data;
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -42,7 +45,7 @@ router.post("/stream", async (req: Request, res: Response) => {
     send("status", { message: "Starting research..." });
 
     const stream = await researchGraph.stream(
-      { query: query.trim() },
+      { query },
       { streamMode: "updates" },
     );
 

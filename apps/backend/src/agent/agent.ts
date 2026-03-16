@@ -6,8 +6,11 @@ export interface AgentResult {
   steps: number;
 }
 
-export async function runAgent(query: string): Promise<AgentResult> {
-  const state = await researchGraph.invoke({ query });
+export async function runAgent(
+  query: string,
+  userId = "anonymous",
+): Promise<AgentResult> {
+  const state = await researchGraph.invoke({ query, userId });
 
   return {
     answer: state.answer,

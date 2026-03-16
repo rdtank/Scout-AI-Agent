@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("../memory", () => ({
+  loadMemories: vi.fn().mockResolvedValue([]),
+  saveMemory: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@langchain/google-genai", () => ({
   ChatGoogleGenerativeAI: vi.fn().mockImplementation(() => ({
     invoke: vi.fn(),

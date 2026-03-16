@@ -12,8 +12,12 @@ router.post("/run", async (req: Request, res: Response) => {
     return;
   }
   const { query } = parsed.data;
+  const userId =
+    typeof req.body.userId === "string" && req.body.userId.trim()
+      ? req.body.userId.trim()
+      : "anonymous";
   try {
-    const result = await runAgent(query);
+    const result = await runAgent(query, userId);
     res.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -29,6 +33,10 @@ router.post("/stream", async (req: Request, res: Response) => {
     return;
   }
   const { query } = parsed.data;
+  const userId =
+    typeof req.body.userId === "string" && req.body.userId.trim()
+      ? req.body.userId.trim()
+      : "anonymous";
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -45,7 +53,7 @@ router.post("/stream", async (req: Request, res: Response) => {
     send("status", { message: "Starting research..." });
 
     const stream = await researchGraph.stream(
-      { query },
+      { query, userId },
       { streamMode: "updates" },
     );
 

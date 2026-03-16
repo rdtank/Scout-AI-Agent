@@ -4,6 +4,7 @@ import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { env } from "../lib/env";
 import { webSearchTool } from "../tools";
 import { GUARDRAILS, isOverStepCap, isToolAllowed } from "./guardrails";
+import { MemoryEntry, loadMemories, saveMemory } from "./memory";
 import {
   PLANNER_PROMPT,
   RESEARCHER_PROMPT,
@@ -12,6 +13,14 @@ import {
 
 const StateAnnotation = Annotation.Root({
   query: Annotation<string>(),
+  userId: Annotation<string>({
+    reducer: (_, next) => next,
+    default: () => "",
+  }),
+  memories: Annotation<MemoryEntry[]>({
+    reducer: (_, next) => next,
+    default: () => [],
+  }),
   subQuestions: Annotation<string[]>({
     reducer: (_, next) => next,
     default: () => [],
@@ -38,6 +47,11 @@ function buildModel() {
     apiKey: env.GEMINI_API_KEY,
     temperature: 0.1,
   });
+}
+
+async function memoryNode(state: State): Promise<Partial<State>> {
+  const memories = await loadMemories(state.userId);
+  return { memories };
 }
 
 async function plannerNode(state: State): Promise<Partial<State>> {
@@ -105,10 +119,18 @@ async function synthesizerNode(state: State): Promise<Partial<State>> {
     .map((f, i) => `[Finding ${i + 1} — ${state.subQuestions[i]}]\n${f}`)
     .join("\n\n---\n\n");
 
+  const memoryContext =
+    state.memories.length > 0
+      ? `\n\nRelevant past research from this user:\n${state.memories
+          .slice(0, 3)
+          .map((m) => `Q: ${m.query}\nA: ${m.answer.slice(0, 300)}`)
+          .join("\n\n")}`
+      : "";
+
   const response = await model.invoke([
     new SystemMessage(SYNTHESIZER_PROMPT),
     new HumanMessage(
-      `Original question: ${state.query}\n\nResearch findings:\n\n${findingsText}`,
+      `Original question: ${state.query}\n\nResearch findings:\n\n${findingsText}${memoryContext}`,
     ),
   ]);
 
@@ -116,6 +138,8 @@ async function synthesizerNode(state: State): Promise<Partial<State>> {
     typeof response.content === "string"
       ? response.content
       : JSON.stringify(response.content);
+
+  await saveMemory(state.userId, state.query, answer);
 
   return { answer };
 }
@@ -129,10 +153,12 @@ function shouldContinueResearch(state: State): "researcher" | "synthesizer" {
 }
 
 export const researchGraph = new StateGraph(StateAnnotation)
+  .addNode("memory", memoryNode)
   .addNode("planner", plannerNode)
   .addNode("researcher", researcherNode)
   .addNode("synthesizer", synthesizerNode)
-  .addEdge(START, "planner")
+  .addEdge(START, "memory")
+  .addEdge("memory", "planner")
   .addEdge("planner", "researcher")
   .addConditionalEdges("researcher", shouldContinueResearch, {
     researcher: "researcher",

@@ -21,7 +21,8 @@ export function useAgentStream() {
     setAnswer("");
 
     try {
-      const response = await fetch("/api/agent/stream", {
+      const apiBase = import.meta.env.VITE_API_URL ?? "";
+      const response = await fetch(`${apiBase}/api/agent/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query }),

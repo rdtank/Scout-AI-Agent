@@ -57,9 +57,10 @@ router.post("/stream", async (req: Request, res: Response) => {
       { streamMode: "updates" },
     );
 
-    for await (const chunk of stream) {
+    for await (const rawChunk of stream) {
+      const chunk = rawChunk as Record<string, Record<string, unknown>>;
       const nodeName = Object.keys(chunk)[0];
-      const update = chunk[nodeName] as Record<string, unknown>;
+      const update = chunk[nodeName];
 
       if (nodeName === "planner") {
         subQuestions = (update.subQuestions as string[]) ?? [];

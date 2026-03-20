@@ -14,7 +14,7 @@ COPY apps/backend/ ./apps/backend/
 RUN pnpm --filter @scout/backend build
 
 # Deploy to a clean directory with only production deps
-RUN pnpm deploy --filter @scout/backend --prod /prod
+RUN pnpm deploy --filter @scout/backend --prod --legacy /prod
 
 # ---- runner ----
 FROM node:22-alpine AS runner

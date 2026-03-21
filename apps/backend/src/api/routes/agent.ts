@@ -47,6 +47,17 @@ router.post("/stream", async (req: Request, res: Response) => {
     res.write(`data: ${JSON.stringify({ type, data })}\n\n`);
   }
 
+  const STREAM_TIMEOUT_MS = 120_000;
+  const timeoutId = setTimeout(() => {
+    console.error("[agent/stream] timed out after 120s");
+    try {
+      send("error", { message: "Research timed out. Please try again." });
+      res.end();
+    } catch {
+      // already closed
+    }
+  }, STREAM_TIMEOUT_MS);
+
   try {
     let subQuestions: string[] = [];
 
@@ -89,6 +100,8 @@ router.post("/stream", async (req: Request, res: Response) => {
     } catch {
       // client already disconnected
     }
+  } finally {
+    clearTimeout(timeoutId);
   }
 });
 

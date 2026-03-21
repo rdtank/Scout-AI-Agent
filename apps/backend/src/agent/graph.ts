@@ -1,4 +1,3 @@
-import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { env } from "../lib/env";
@@ -43,9 +42,10 @@ type State = typeof StateAnnotation.State;
 
 function buildModel() {
   return new ChatGoogleGenerativeAI({
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     apiKey: env.GEMINI_API_KEY,
     temperature: 0.1,
+    maxRetries: 1,
   });
 }
 
@@ -57,8 +57,8 @@ async function memoryNode(state: State): Promise<Partial<State>> {
 async function plannerNode(state: State): Promise<Partial<State>> {
   const model = buildModel();
   const response = await model.invoke([
-    new SystemMessage(PLANNER_PROMPT),
-    new HumanMessage(state.query),
+    ["system", PLANNER_PROMPT],
+    ["human", state.query],
   ]);
 
   const raw =
@@ -95,10 +95,8 @@ async function researcherNode(state: State): Promise<Partial<State>> {
   const searchResults = await webSearchTool.invoke({ query: question });
 
   const response = await model.invoke([
-    new SystemMessage(RESEARCHER_PROMPT),
-    new HumanMessage(
-      `Sub-question: ${question}\n\nSearch results:\n${searchResults}`,
-    ),
+    ["system", RESEARCHER_PROMPT],
+    ["human", `Sub-question: ${question}\n\nSearch results:\n${searchResults}`],
   ]);
 
   const summary =
@@ -128,10 +126,11 @@ async function synthesizerNode(state: State): Promise<Partial<State>> {
       : "";
 
   const response = await model.invoke([
-    new SystemMessage(SYNTHESIZER_PROMPT),
-    new HumanMessage(
+    ["system", SYNTHESIZER_PROMPT],
+    [
+      "human",
       `Original question: ${state.query}\n\nResearch findings:\n\n${findingsText}${memoryContext}`,
-    ),
+    ],
   ]);
 
   const answer =

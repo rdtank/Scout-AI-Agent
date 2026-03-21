@@ -3,15 +3,17 @@ import { useFormStatus } from "react-dom";
 function QueryInput() {
   const { pending } = useFormStatus();
   return (
-    <input
-      className="scout-input"
-      type="text"
-      name="query"
-      placeholder="What do you want to research?"
-      disabled={pending}
-      autoFocus
-      required
-    />
+    <div className="scout-input-wrap">
+      <input
+        className="scout-input"
+        type="text"
+        name="query"
+        placeholder="What do you want to research?"
+        disabled={pending}
+        autoFocus
+        required
+      />
+    </div>
   );
 }
 
@@ -19,7 +21,7 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   return (
     <button className="scout-button" type="submit" disabled={pending}>
-      {pending ? "Researching…" : "Search"}
+      {pending ? "Researching…" : "Search →"}
     </button>
   );
 }

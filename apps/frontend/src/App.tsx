@@ -7,19 +7,33 @@ import { useAgentStream } from "./hooks/useAgentStream";
 export default function App() {
   const { appState, events, answer, handleAction, formRef } = useAgentStream();
 
+  const showResults = events.length > 0 || !!answer;
+
   return (
     <div className="scout-container">
       <header className="scout-header">
-        <h1>Scout</h1>
-        <p>Autonomous research agent — ask anything</p>
+        <div className="scout-logo">
+          <img
+            src="/favicon.svg"
+            alt="Scout logo"
+            className="scout-logo-img"
+          />
+          <h1 className="scout-title">Scout</h1>
+        </div>
+        <p className="scout-subtitle">Autonomous research agent — ask anything</p>
       </header>
 
-      <main className="scout-main">
+      <main>
         <SearchForm ref={formRef} action={handleAction} />
-        {events.length > 0 && (
-          <ActivityFeed events={events} isRunning={appState === "running"} />
+
+        {showResults && (
+          <div className="scout-results">
+            {events.length > 0 && (
+              <ActivityFeed events={events} isRunning={appState === "running"} />
+            )}
+            {answer && <Answer text={answer} />}
+          </div>
         )}
-        {answer && <Answer text={answer} />}
       </main>
     </div>
   );

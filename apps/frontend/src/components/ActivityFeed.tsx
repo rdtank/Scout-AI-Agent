@@ -2,16 +2,15 @@ import type { AgentEvent } from "../types";
 
 function ActivityCard({ event }: { event: AgentEvent }) {
   if (event.type === "status") {
+    const hasQuestions = !!event.data.subQuestions?.length;
     return (
-      <div className="activity-card">
-        <span className="activity-icon">
-          {event.data.subQuestions ? "📋" : "⏳"}
-        </span>
+      <div className={`activity-card card-status`}>
+        <span className="activity-icon">{hasQuestions ? "📋" : "⚡"}</span>
         <div className="activity-content">
           <div className="activity-label">{event.data.message}</div>
-          {event.data.subQuestions && (
+          {hasQuestions && (
             <ul className="sub-questions">
-              {event.data.subQuestions.map((q, i) => (
+              {event.data.subQuestions!.map((q, i) => (
                 <li key={i}>{q}</li>
               ))}
             </ul>
@@ -23,13 +22,13 @@ function ActivityCard({ event }: { event: AgentEvent }) {
 
   if (event.type === "tool_result") {
     return (
-      <div className="activity-card">
+      <div className="activity-card card-tool">
         <span className="activity-icon">🔍</span>
         <div className="activity-content">
           <div className="activity-label">
             <span className="step-badge">
               {event.data.step}/{event.data.total}
-            </span>{" "}
+            </span>
             {event.data.subQuestion}
           </div>
         </div>
@@ -39,7 +38,7 @@ function ActivityCard({ event }: { event: AgentEvent }) {
 
   if (event.type === "error") {
     return (
-      <div className="activity-card activity-error">
+      <div className="activity-card card-error">
         <span className="activity-icon">⚠️</span>
         <div className="activity-content">
           <div className="activity-label">{event.data.message}</div>
@@ -59,17 +58,19 @@ interface Props {
 export function ActivityFeed({ events, isRunning }: Props) {
   return (
     <div className="activity-feed">
-      <div className="feed-label">Activity</div>
-      {events.map((event, i) => (
-        <ActivityCard key={i} event={event} />
-      ))}
-      {isRunning && (
-        <div className="activity-pulse">
-          <span />
-          <span />
-          <span />
-        </div>
-      )}
+      <div className="section-label">Research Activity</div>
+      <div className="feed-cards">
+        {events.map((event, i) => (
+          <ActivityCard key={i} event={event} />
+        ))}
+        {isRunning && (
+          <div className="activity-pulse">
+            <span />
+            <span />
+            <span />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

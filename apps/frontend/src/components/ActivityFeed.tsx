@@ -38,7 +38,7 @@ function ActivityCard({ event }: { event: AgentEvent }) {
 
   if (event.type === "error") {
     return (
-      <div className="activity-card card-error">
+      <div className="activity-card card-error activity-error">
         <span className="activity-icon">⚠️</span>
         <div className="activity-content">
           <div className="activity-label">{event.data.message}</div>

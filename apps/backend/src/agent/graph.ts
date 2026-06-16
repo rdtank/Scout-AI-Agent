@@ -42,7 +42,7 @@ type State = typeof StateAnnotation.State;
 
 function buildModel() {
   return new ChatGoogleGenerativeAI({
-    model: "gemini-2.5-flash",
+    model: "gemini-2.5-flash-lite",
     apiKey: env.GEMINI_API_KEY,
     temperature: 0.1,
     maxRetries: 1,
